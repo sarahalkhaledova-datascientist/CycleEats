@@ -47,8 +47,11 @@ Combined in a **hybrid** ranking with adjustable weights. Evaluated with HitRate
 ## Repository structure
 
 ```
+├── data/
+│   ├── raw/          original datasets (not in the repo, see below)
+│   └── processed/    generated data (not in the repo; later: the app's data file)
 ├── notebooks/        notebooks + hand-made files (manual_*.csv, phase_*.csv)
-├── data/raw/         original datasets (not in the repo, see below)
+├── src/              shared code (recommenders, app)
 ├── README.md
 └── requirements.txt
 ```
