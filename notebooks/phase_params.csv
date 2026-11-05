@@ -1,0 +1,5 @@
+﻿phase,gate_pct,gate_min_count,top_share
+menstrual,10,1,0.25
+follicular,10,2,0.25
+ovulatory,10,2,0.25
+luteal,10,1,0.25

@@ -1,0 +1,12 @@
+﻿ingredient,status,before,after,fdc_id,note
+chicken breast,fixed,"Chicken breast, deli, rotisserie seasoned, sliced, prepackaged","Chicken, broilers or fryers, meat and skin, raw",171447,wrong match
+roasting chicken,fixed,"Chicken, roasting, giblets, raw","Chicken, broilers or fryers, meat and skin, raw",171447,wrong match
+whole berry cranberry sauce,fixed,"Cranberry sauce, canned, sweetened","Cranberry sauce, canned, sweetened",173961,was mapped to worcestershire
+cool whip,fixed,"Salad dressing, KRAFT MIRACLE WHIP FREE Nonfat Dressing","Dessert topping, semi solid, frozen",170868,wrong match
+bisquick,fixed,,"Biscuits, plain or buttermilk, dry mix",174902,unmapped
+brandy,fixed,,"Alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 80 proof",174815,unmapped
+linguine,fixed,,"Pasta, dry, enriched",169736,unmapped
+mangoe,fixed,,"Mangos, raw",169910,synonym: mango
+oleo,fixed,,"Margarine, regular, 80% fat, composite, stick, with salt",172346,synonym: margarine
+cornflour,fixed,,Cornstarch,169698,synonym: cornstarch
+sultana,fixed,,"Raisins, golden, seedless",168164,synonym: raisin
