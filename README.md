@@ -30,7 +30,7 @@ Run the notebooks in this order, from inside the `notebooks/` folder.
 
 - 522,517 raw recipes → **42,736** recipes with estimated nutrients
 - Quality (estimated vs. original calories): good 9,782 · fair 4,677 · poor 10,590 · unverified 17,687
-- Phase labels (good + fair only): menstrual 2,134 · follicular 1,910 · ovulatory 1,910 · luteal 1,611
+- Phase labels (good + fair only): menstrual 1,952 · follicular 1,866 · ovulatory 1,866 · luteal 1,529 · **3,103** recipes labeled in at least one phase
 - Interactions: 164,235 from 60,183 users on 24,452 recipes (density 0.011%)
 - Evaluation: 4,852 users with ≥ 5 interactions; 20% of their liked recipes held out
 
