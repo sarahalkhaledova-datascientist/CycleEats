@@ -17,6 +17,8 @@ notebooks/*.csv
 !notebooks/phase_params.csv
 !notebooks/fixes_log.csv
 !notebooks/interactions_summary.csv
+!notebooks/meal_type_map.csv
+!notebooks/pantry_staples.csv
 
 # --- old notebook versions ---
 notebooks/backups/
@@ -29,6 +31,10 @@ venv/
 env/
 
 # --- Mac ---
-.DS_Store*.npz
 *.npz
 .DS_Store
+
+# --- app data: the Streamlit app reads these from the repo, KEEP them ---
+!app/data/
+!app/data/*.npz
+!app/data/*.csv

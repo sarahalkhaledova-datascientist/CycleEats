@@ -1,0 +1,47 @@
+{
+  "weights": {
+    "popularity": 0.0,
+    "content": 0.25,
+    "item_cf": 0.25,
+    "user_cf": 0.5,
+    "phase": 0.35,
+    "pantry": 0.5
+  },
+  "item_k": 10,
+  "user_k": 100,
+  "like_threshold": 4,
+  "max_missing_default": 2,
+  "own_top10_cap": 3,
+  "own_unknown_max": 0.3,
+  "meal_types": [
+    "Main",
+    "Breakfast",
+    "Salads & sides",
+    "Snacks & appetizers",
+    "Desserts & baking",
+    "Sauces & dressings",
+    "Other"
+  ],
+  "meal_types_hidden_by_default": [
+    "Sauces & dressings"
+  ],
+  "meal_type_default": [
+    "Main",
+    "Salads & sides"
+  ],
+  "phases": [
+    "menstrual",
+    "follicular",
+    "ovulatory",
+    "luteal"
+  ],
+  "phase_scoring": {
+    "max_pct_dv": 200,
+    "min_kcal_eligible": 100,
+    "max_kcal": 1200,
+    "density_cap": 20,
+    "min_kcal_density": 100
+  },
+  "n_catalog": 12375,
+  "n_users": 60183
+}

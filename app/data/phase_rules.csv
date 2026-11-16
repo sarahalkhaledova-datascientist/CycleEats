@@ -1,0 +1,23 @@
+﻿phase,nutrient,tier,weight,gate,reason,source
+menstrual,iron_mg,strong,3.0,Y,RDA للنساء 19-50 سنة 18 ملغ مقابل 8 للرجال؛ نقص الحديد أشيع مع غزارة النزف,NIH ODS Iron fact sheet
+menstrual,vitc_mg,medium,2.0,Y,يحسّن امتصاص الحديد النباتي,NIH ODS Iron fact sheet
+menstrual,magnesium_mg,weak,1.0,N,أدلة متضاربة لتخفيف أعراض الدورة,Parazzini 2017; Boyle 2017
+menstrual,folate_ug,general,0.5,N,جودة تغذية عامة، لا دليل خاص بالمرحلة,general
+menstrual,vitb12_ug,general,0.5,N,جودة تغذية عامة، لا دليل خاص بالمرحلة,general
+menstrual,protein_g,general,0.5,N,جودة تغذية عامة، لا دليل خاص بالمرحلة,general
+follicular,zinc_mg,weak,1.0,Y,أدلة محدودة للزنك مع أعراض الدورة (Brown 2024)؛ لا دليل خاص بالمرحلة,Brown 2024
+follicular,protein_g,general,0.5,Y,جودة تغذية عامة,general
+follicular,fiber_g,general,0.5,Y,جودة تغذية عامة,general
+follicular,folate_ug,general,0.5,Y,جودة تغذية عامة,general
+follicular,vitb12_ug,general,0.5,N,جودة تغذية عامة,general
+ovulatory,zinc_mg,weak,1.0,Y,أدلة محدودة للزنك مع أعراض الدورة (Brown 2024)؛ لا دليل خاص بالمرحلة,Brown 2024
+ovulatory,protein_g,general,0.5,Y,جودة تغذية عامة,general
+ovulatory,fiber_g,general,0.5,Y,جودة تغذية عامة,general
+ovulatory,folate_ug,general,0.5,Y,جودة تغذية عامة,general
+ovulatory,vitb12_ug,general,0.5,N,جودة تغذية عامة,general
+luteal,calcium_mg,medium,2.0,Y,الكالسيوم مدعوم لتخفيف أعراض ما قبل الحيض,Primary-care evidence summaries; Brown 2024
+luteal,vitb6_mg,medium,2.0,Y,B6 قد يفيد لأعراض ما قبل الحيض (جرعات عالية خطرة بالمكمّلات),Primary-care evidence summaries
+luteal,magnesium_mg,weak,1.0,N,أدلة متضاربة وجودتها ضعيفة,Parazzini 2017; Boyle 2017
+luteal,zinc_mg,weak,1.0,N,أدلة محدودة,Brown 2024
+luteal,fiber_g,general,0.5,N,جودة تغذية عامة,general
+luteal,potassium_mg,general,0.5,N,جودة تغذية عامة,general
