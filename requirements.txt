@@ -4,3 +4,4 @@ jupyterlab
 pyarrow
 scipy
 scikit-learn
+streamlit>=1.50

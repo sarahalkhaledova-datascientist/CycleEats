@@ -252,13 +252,11 @@ class Recommender:
                 "image_url": rec["image_url"],
             })
 
-        # own recipes: only when suitable for the phase, at most own_top10_cap of the top k
+        # own recipes: always join the mix (up to own_top10_cap of the top k); phase-suitable ones first
         own_rows_out = []
-        if phase:
+        if True:
             sorted_personal = {c: np.sort(comp_rank[c] if c == "popularity" else raw[c]) for c in avail}
             for o in own_recipes:
-                if not o.info["labels"].get(phase):
-                    continue
                 if meal_types and o.meal_type not in meal_types:
                     continue
                 others = [x.info["tfidf"] for x in own_recipes if x is not o]
@@ -269,7 +267,10 @@ class Recommender:
                     content_raw = max(content_raw, float(row @ o.info["tfidf"]))
                 own_raw = {"popularity": 0.0, "content": content_raw, "item_cf": 0.0, "user_cf": 0.0}
                 pers = sum(avail[c] / total_w * percentile_against(sorted_personal[c], own_raw[c])[0] for c in avail)
-                s = pers + w.get("phase", 0) * percentile_against(self.phase_sorted[phase], o.info["scores"][phase])[0]
+                s = pers
+                if phase:
+                    s += w.get("phase", 0) * percentile_against(self.phase_sorted[phase], o.info["scores"][phase])[0]
+                fit = bool(phase and o.info["labels"].get(phase))
                 own_parts = set(o.info["parts"])
                 o_share = len(own_parts & have) / len(own_parts) if own_parts else 0.0
                 if use_pantry:
@@ -278,13 +279,13 @@ class Recommender:
                     s += w.get("pantry", 0) * o_share
                 own_rows_out.append({
                     "id": o.id, "is_own": True, "name": o.name, "meal_type": o.meal_type, "minutes": None,
-                    "calories": o.info["kcal"], "score": float(s), "phase_fit": True, "why": o.info["why"][phase],
+                    "calories": o.info["kcal"], "score": float(s), "phase_fit": fit, "why": o.info["why"][phase] if fit else "",
                     "match": o_share if use_pantry else None,
                     "missing": sorted(own_parts - have) if use_pantry else [], "image_url": "",
                 })
-        # suitable own recipes are guaranteed a place (priority), up to the cap; catalog fills the rest
+        # own recipes are guaranteed a place, up to the cap (phase-suitable first); the catalogue fills the rest
         cap = int(self.config["own_top10_cap"])
-        own_rows_out = sorted(own_rows_out, key=lambda r: -r["score"])[:cap]
+        own_rows_out = sorted(own_rows_out, key=lambda r: (not r["phase_fit"], -r["score"]))[:cap]
         out = pd.DataFrame(rows[:max(k - len(own_rows_out), 0)] + own_rows_out)
         if out.empty:
             return out
