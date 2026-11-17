@@ -54,6 +54,10 @@ def get_recommender() -> Recommender:
 
 R = get_recommender()
 MIN_ONBOARD = 3            # recipes to like before leaving the start screen
+PAGE = 12                  # suggestions per page ("Show more" adds another page)
+MAX_SHOWN = 48
+N_RECENT = 5
+SEARCH_LIMIT = 24
 CFG = R.config
 WEIGHT_LABELS = {"content": "Similar ingredients (Content-Based)", "item_cf": "Recipes liked together (Item-CF)",
                  "user_cf": "People with your taste (User-CF)", "popularity": "Popular overall",
@@ -113,6 +117,8 @@ def init_state():
     ss.setdefault("user_name", "")
     ss.setdefault("setup_step", 0)                # 0 name · 1 cycle · 2 recipes
     ss.setdefault("hearts", [])
+    ss.setdefault("recent", [])                   # recently opened catalogue recipes, newest first
+    ss.setdefault("n_shown", PAGE)
     ss.setdefault("own", [])                      # list of dicts (serialisable)
     ss.setdefault("onboarding_done", False)
     ss.setdefault("last_start", date.today() - timedelta(days=3))
@@ -155,11 +161,12 @@ def own_objects() -> list[OwnRecipe]:
 
 
 def export_data() -> str:
-    keys = ["user_name", "hearts", "own", "last_start", "cycle_len", "period_len", "manual_phase", "phase_pick", "pantry",
+    keys = ["user_name", "hearts", "recent", "own", "last_start", "cycle_len", "period_len", "manual_phase", "phase_pick", "pantry",
             "use_staples", "only_cookable", "max_missing", "meal_types", "onboarding_done"] + [f"w_{k}" for k in R.weights_default]
     data = {k: ss[k] for k in keys}
     data["last_start"] = ss.last_start.isoformat()
     data["hearts"] = [int(h) for h in ss.hearts]
+    data["recent"] = [int(h) for h in ss.recent]
     return json.dumps({"app": "CycleEats", "version": 1, "data": data}, indent=2)
 
 
@@ -177,6 +184,14 @@ def import_data(raw: bytes):
 def reset_weights():
     for k, v in R.weights_default.items():
         ss[f"w_{k}"] = float(v)
+
+
+def show_more():
+    ss.n_shown = min(ss.n_shown + PAGE, MAX_SHOWN)
+
+
+def clear_search():
+    ss.search_q = ""
 
 
 def restore_from_upload():
@@ -353,7 +368,9 @@ def open_recipe(row):
                 "ingredients": [f"{q:g} {u} · {n}" for n, q, u in o.ingredients],
                 "steps": [x for x in o.instructions.split("\n") if x.strip()], "pdv": o.info["pdv"]}
     else:
-        rec = R.recipe(int(row["id"]))
+        rid = int(row["id"])
+        ss.recent = ([rid] + [r for r in ss.recent if r != rid])[:N_RECENT]
+        rec = R.recipe(rid)
         badge = (f'<span class="ce-badge">Good for your {PHASE_LABELS[phase].lower()} phase</span>'
                  if rec[f"label_{phase}"] else "")
         item = {"name": rec["Name"], "meta": meta, "badges": badge, "why": rec[f"why_{phase}"],
@@ -490,25 +507,45 @@ tab_for_you, tab_fav, tab_own, tab_about = st.tabs(["✨ For you", "♥ Favourit
 with tab_for_you:
   if True:
     with st.container(key="sec_foryou"):
-        basis = [f"{len(ss.hearts)} recipes you like" if ss.hearts else "popular recipes (no likes yet)",
+        basis = [f"{len(ss.hearts)} recipe{'s' if len(ss.hearts) != 1 else ''} you like" if ss.hearts else "popular recipes (no likes yet)",
                  f"your {PHASE_LABELS[phase].lower()} phase"]
         if ss.pantry:
             basis.append("your kitchen")
         section_title("What would you like to eat today?",
                       "Based on " + ", ".join(basis) + ". Tap ♡ on recipes you like and the list learns your taste. "
                       "It updates automatically when you change anything in the sidebar.")
-        if len(ss.hearts) < MIN_ONBOARD:
-            st.info(f"{len(ss.hearts)} liked so far. Like a few more for more personal suggestions.")
-        if not ss.meal_types:
+        c_q, c_x = st.columns([6, 1], vertical_alignment="bottom")
+        query = c_q.text_input("Search recipes", key="search_q", placeholder="🔍 Search a recipe by name, e.g. banana bread",
+                               label_visibility="collapsed")
+        if query.strip():
+            c_x.button("Clear", on_click=clear_search, width="stretch")
+            found = R.search(query, phase=phase, limit=SEARCH_LIMIT)
+            if found.empty:
+                st.info(f"No recipes found for “{query.strip()}”. Try another word.")
+            else:
+                st.caption(f"{len(found)}{'+' if len(found) == SEARCH_LIMIT else ''} recipes match “{query.strip()}”. "
+                           "Recipes that fit your phase come first among similar matches.")
+                show_grid(found, "srch")
+        elif not ss.meal_types:
             st.warning("Pick at least one meal type in the sidebar.")
         else:
+            if len(ss.hearts) < MIN_ONBOARD:
+                st.info(f"{len(ss.hearts)} liked so far. Like a few more for more personal suggestions.")
+            # back to one page whenever a setting changes (liking a recipe does not count)
+            sig = (phase, tuple(sorted(ss.pantry)), tuple(ss.meal_types), ss.only_cookable, int(ss.max_missing),
+                   ss.use_staples, tuple(sorted(weights.items())))
+            if ss.get("_rec_sig") != sig:
+                ss._rec_sig, ss.n_shown = sig, PAGE
             recs = R.recommend(hearts=ss.hearts, phase=phase, pantry=set(ss.pantry), meal_types=ss.meal_types,
                                own_recipes=own_objects(), weights=weights, only_cookable=ss.only_cookable,
-                               max_missing=int(ss.max_missing), use_staples=ss.use_staples, k=12)
+                               max_missing=int(ss.max_missing), use_staples=ss.use_staples, k=ss.n_shown, page=PAGE)
             if recs.empty:
                 st.warning("No recipes match. Allow more missing ingredients or add meal types.")
             else:
                 show_grid(recs, "rec")
+                if len(recs) >= ss.n_shown and ss.n_shown < MAX_SHOWN:
+                    _, mid, _ = st.columns([1, 2, 1])
+                    mid.button(f"Show more ({ss.n_shown} of {MAX_SHOWN} shown)", on_click=show_more, width="stretch")
 
 with tab_fav, st.container(key="sec_fav"):
     section_title("Recipes you like", "Everything you tapped ♡ on. Tap ♥ again to remove one.")
@@ -521,6 +558,16 @@ with tab_fav, st.container(key="sec_fav"):
                            "is_own": False, "phase_fit": fav[f"label_{phase}"], "why": fav[f"why_{phase}"],
                            "match": None, "missing": [[]] * len(fav)})
         show_grid(df, "fav")
+
+    recent = [r for r in ss.recent if r in R.idx.index]
+    if recent:
+        st.markdown("")
+        section_title("Recently viewed", "The last recipes you opened, in case you forgot to tap ♡.")
+        rv = R.recipes.set_index("RecipeId").loc[recent].reset_index()
+        show_grid(pd.DataFrame({"id": rv["RecipeId"], "name": rv["Name"], "meal_type": rv["meal_type"],
+                                "minutes": rv["TotalTime_min"], "calories": rv["Calories"], "image_url": rv["image_url"],
+                                "is_own": False, "phase_fit": rv[f"label_{phase}"], "why": rv[f"why_{phase}"],
+                                "match": None, "missing": [[]] * len(rv)}), "recent", n_cols=5)
 
 with tab_own, st.container(key="sec_own"):
     section_title("My recipes", "Your own recipes get the same nutrient and cycle-phase check as the catalogue.")

@@ -15,7 +15,9 @@ likes. With no hearts, Popularity stands in for the personal systems.
 """
 from __future__ import annotations
 
+import difflib
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -197,8 +199,12 @@ class Recommender:
     def recommend(self, hearts=(), phase: str | None = None, pantry=None, meal_types=None,
                   own_recipes: list[OwnRecipe] | None = None, weights: dict | None = None,
                   only_cookable: bool = False, max_missing: int | None = None,
-                  use_staples: bool = True, k: int = 10, exclude=()) -> pd.DataFrame:
-        """Top-k recommendations as a DataFrame (catalog recipes and, if suitable, own recipes)."""
+                  use_staples: bool = True, k: int = 10, exclude=(), page: int | None = None) -> pd.DataFrame:
+        """Top-k recommendations as a DataFrame (catalog recipes and, if suitable, own recipes).
+
+        Own recipes are mixed into the first ``page`` rows (default: all k), so asking for more rows
+        ("Show more") keeps the first page exactly as it was and only adds catalogue recipes below it.
+        """
         w = dict(self.weights_default)
         w.update(weights or {})
         max_missing = self.config["max_missing_default"] if max_missing is None else max_missing
@@ -286,10 +292,11 @@ class Recommender:
         # own recipes are guaranteed a place, up to the cap (phase-suitable first); the catalogue fills the rest
         cap = int(self.config["own_top10_cap"])
         own_rows_out = sorted(own_rows_out, key=lambda r: (not r["phase_fit"], -r["score"]))[:cap]
-        out = pd.DataFrame(rows[:max(k - len(own_rows_out), 0)] + own_rows_out)
-        if out.empty:
-            return out
-        return out.sort_values("score", ascending=False).reset_index(drop=True)
+        page = k if page is None else min(page, k)
+        cat_rows = rows[:max(k - len(own_rows_out), 0)]
+        n_first = max(page - len(own_rows_out), 0)
+        first = sorted(cat_rows[:n_first] + own_rows_out, key=lambda r: -r["score"])
+        return pd.DataFrame(first + cat_rows[n_first:])
 
     # ------------------------------------------------------------------ own recipes
     def phase_core(self, pdv: dict, kcal: float):
@@ -357,3 +364,54 @@ class Recommender:
 
     def ingredient_names(self) -> list[str]:
         return self.ingredients.index.tolist()
+
+    # ------------------------------------------------------------------ search
+    def _build_search_index(self):
+        self._name_words = [set(_words(n)) for n in self.recipes["Name"]]
+        self._name_text = [" ".join(_words(n)) for n in self.recipes["Name"]]
+        self._vocab = sorted(set().union(*self._name_words))
+
+    def _word_matches(self, q: str) -> dict[str, float]:
+        """Name words that match one query word: 1.0 for a prefix match, else similarity for typos."""
+        out = {w: 1.0 for w in self._vocab if w.startswith(q)}
+        if len(q) >= 3:
+            for w in difflib.get_close_matches(q, self._vocab, n=25, cutoff=0.75):
+                out.setdefault(w, difflib.SequenceMatcher(None, q, w).ratio())
+        return out
+
+    def search(self, query: str, phase: str | None = None, limit: int = 24) -> pd.DataFrame:
+        """Recipes whose name matches the query (forgiving of typos). Best match first,
+        then recipes that fit the phase, then the most popular."""
+        if not hasattr(self, "_vocab"):
+            self._build_search_index()
+        q_words = _words(query)
+        if not q_words:
+            return pd.DataFrame()
+        per_word = [self._word_matches(q) for q in q_words]
+        score = np.zeros(self.n)
+        for m in per_word:
+            if not m:
+                return pd.DataFrame()
+            best = np.array([max((m.get(w, 0.0) for w in ws), default=0.0) for ws in self._name_words])
+            score = np.where(best > 0, score + best, -np.inf)     # every query word must match
+        hits = np.where(np.isfinite(score))[0]
+        if not len(hits):
+            return pd.DataFrame()
+        # closer matches first: the exact phrase in the name helps, extra words in the name cost a little
+        phrase = " ".join(q_words)
+        rel = score[hits] + np.array([0.5 * (phrase in self._name_text[i]) - 0.05 * max(len(self._name_words[i]) - len(q_words), 0)
+                                      for i in hits])
+        bucket = np.floor(rel * 10 + 1e-9) / 10                    # similar matches share a bucket, then phase fit, then popularity
+        fit = self.recipes[f"label_{phase}"].to_numpy(bool) if phase else np.zeros(self.n, bool)
+        order = hits[np.lexsort((-self.pop_rank[hits], ~fit[hits], -bucket))][:limit]
+        rec = self.recipes.iloc[order]
+        return pd.DataFrame({
+            "id": rec["RecipeId"].astype(int).to_numpy(), "is_own": False, "name": rec["Name"].to_numpy(),
+            "meal_type": rec["meal_type"].to_numpy(), "minutes": rec["TotalTime_min"].to_numpy(),
+            "calories": rec["Calories"].to_numpy(), "image_url": rec["image_url"].to_numpy(),
+            "phase_fit": fit[order], "why": rec[f"why_{phase}"].to_numpy() if phase else "",
+            "match": None, "missing": [[] for _ in order]})
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", str(text).lower())
