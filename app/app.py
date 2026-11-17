@@ -5,13 +5,16 @@ Run locally:  streamlit run app/app.py
 from __future__ import annotations
 
 import difflib
+import hashlib
 import json
 import uuid
 from datetime import date, timedelta
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
+import recommenders
 from recommenders import PHASE_LABELS, UNITS, OwnRecipe, Recommender, cycle_phase
 
 st.set_page_config(page_title="CycleEats", page_icon="🌿", layout="wide")
@@ -48,11 +51,12 @@ st.markdown("""
 
 
 @st.cache_resource(show_spinner="Loading recipes…")
-def get_recommender() -> Recommender:
+def get_recommender(code_version: str) -> Recommender:
     return Recommender()
 
 
-R = get_recommender()
+# the cache is rebuilt whenever recommenders.py changes (otherwise an update keeps the old object)
+R = get_recommender(hashlib.md5(Path(recommenders.__file__).read_bytes()).hexdigest())
 MIN_ONBOARD = 3            # recipes to like before leaving the start screen
 PAGE = 12                  # suggestions per page ("Show more" adds another page)
 MAX_SHOWN = 48
