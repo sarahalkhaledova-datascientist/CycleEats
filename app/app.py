@@ -43,6 +43,9 @@ st.markdown("""
 .ce-section-title { font-size: 1.4rem !important; font-weight: 700; color: var(--ce-text); margin: 0.2rem 0 0; }
 .ce-step { color: var(--ce-accent); font-weight: 700; letter-spacing: 0.04em; font-size: 0.85rem; text-transform: uppercase; }
 .ce-wiz-title { font-size: 1.7rem !important; line-height: 1.25; font-weight: 700; color: var(--ce-text); margin: 0.2rem 0 0.2rem; }
+.ce-photo { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 10px; display: block; }
+.ce-credit { color: var(--ce-muted); font-size: 0.68rem; margin: 0.15rem 0 0.4rem; }
+.ce-credit a { color: var(--ce-muted) !important; text-decoration: underline; }
 .ce-foot { color: var(--ce-muted); font-size: 0.8rem; margin-top: 2rem; }
 [class*="st-key-card_"], .st-key-wizard, .st-key-about_box { background: #ffffff; }
 .st-key-wizard { border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 18px rgba(0,0,0,0.05); }
@@ -55,8 +58,17 @@ def get_recommender(code_version: str) -> Recommender:
     return Recommender()
 
 
-# the cache is rebuilt whenever recommenders.py changes (otherwise an update keeps the old object)
-R = get_recommender(hashlib.md5(Path(recommenders.__file__).read_bytes()).hexdigest())
+def code_version() -> str:
+    """Changes when recommenders.py or the photo list changes, so the cached recommender is rebuilt."""
+    h = hashlib.md5(Path(recommenders.__file__).read_bytes())
+    photos = Path(recommenders.DATA_DIR) / "photos.csv"
+    if photos.exists():
+        h.update(photos.read_bytes())
+    return h.hexdigest()
+
+
+# the cache is rebuilt whenever the code or photos change (otherwise an update keeps the old object)
+R = get_recommender(code_version())
 MIN_ONBOARD = 3            # recipes to like before leaving the start screen
 PAGE = 12                  # suggestions per page ("Show more" adds another page)
 MAX_SHOWN = 48
@@ -317,6 +329,18 @@ def section_title(title: str, sub: str = ""):
         st.caption(sub)
 
 
+UTM = "?utm_source=cycleeats&utm_medium=referral"
+
+
+def photo_html(ph: dict, w: int = 600, h: int = 400, note: str = "") -> str:
+    """Unsplash photo (hotlinked) with the credit the Unsplash guidelines ask for."""
+    url = f'{ph["url_raw"]}&w={w}&h={h}&fit=crop&auto=format&q=75'
+    alt = str(ph.get("alt") or "food photo").replace('"', "'")
+    credit = (f'{note}Photo by <a href="{ph["author_url"]}{UTM}" target="_blank">{ph["author"]}</a> on '
+              f'<a href="https://unsplash.com/{UTM}" target="_blank">Unsplash</a>')
+    return f'<img class="ce-photo" src="{url}" alt="{alt}" loading="lazy"><div class="ce-credit">{credit}</div>'
+
+
 def nutrient_bars(pdv: dict, n: int = 6):
     top = sorted(pdv.items(), key=lambda kv: -kv[1])[:n]
     for k, v in top:
@@ -325,9 +349,9 @@ def nutrient_bars(pdv: dict, n: int = 6):
 
 @st.dialog("Recipe", width="large")
 def recipe_dialog(item: dict):
-    if item.get("image_url"):
+    if item.get("photo"):
         c_img, c_head = st.columns([2, 3])
-        c_img.image(item["image_url"], width="stretch")
+        c_img.markdown(photo_html(item["photo"], 720, 480, note="For illustration. "), unsafe_allow_html=True)
         head = c_head
     else:
         head = st.container()
@@ -368,7 +392,7 @@ def open_recipe(row):
     if row.get("is_own"):
         o = next(x for x in own_objects() if x.id == row["id"])
         item = {"name": o.name, "meta": meta, "badges": '<span class="ce-badge own">My recipe</span>',
-                "why": o.info["why"].get(phase, ""), "description": "", "image_url": "",
+                "why": o.info["why"].get(phase, ""), "description": "", "photo": R.photo(o.name, o.meal_type, o.id),
                 "ingredients": [f"{q:g} {u} · {n}" for n, q, u in o.ingredients],
                 "steps": [x for x in o.instructions.split("\n") if x.strip()], "pdv": o.info["pdv"]}
     else:
@@ -378,7 +402,7 @@ def open_recipe(row):
         badge = (f'<span class="ce-badge">Good for your {PHASE_LABELS[phase].lower()} phase</span>'
                  if rec[f"label_{phase}"] else "")
         item = {"name": rec["Name"], "meta": meta, "badges": badge, "why": rec[f"why_{phase}"],
-                "description": rec["description"], "image_url": rec["image_url"],
+                "description": rec["description"], "photo": R.photo(rec["Name"], rec["meal_type"], rid),
                 "ingredients": list(rec["ingredients_display"]), "steps": list(rec["instructions"]),
                 "unit_note": "Food.com lists quantities without units (e.g. 2 · butter).",
                 "pdv": {n: float(rec[f"pdv_{n}"]) for n in R.dv.index}}
@@ -396,12 +420,11 @@ def card_meta(row) -> str:
 
 def show_card(row, key_prefix: str):
     with st.container(border=True, key=f"card_{key_prefix}_{str(row['id']).replace(':', '_')}"):
-        if row.get("is_own"):
-            st.markdown('<div class="ce-noimg">📝</div>', unsafe_allow_html=True)
-        elif row.get("image_url"):
-            st.image(row["image_url"], width="stretch")
+        ph = R.photo(row["name"], row["meal_type"], row["id"])
+        if ph:
+            st.markdown(photo_html(ph), unsafe_allow_html=True)
         else:
-            st.markdown('<div class="ce-noimg">🥗</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="ce-noimg">{"📝" if row.get("is_own") else "🍽️"}</div>', unsafe_allow_html=True)
         st.markdown(f"**{row['name']}**")
         st.markdown(f'<span class="ce-meta">{card_meta(row)}</span>', unsafe_allow_html=True)
         badges = ""
@@ -671,6 +694,9 @@ Your kitchen adds a sixth signal: how many of a recipe's ingredients you already
 
 **Data:** 12,375 Food.com recipes (public domain) with nutrients estimated from USDA FoodData Central.
 Nutrient values are estimates.
+
+**Photos:** from [Unsplash](https://unsplash.com/?utm_source=cycleeats&utm_medium=referral), chosen by dish type
+(e.g. *banana bread*, *lentil soup*). They illustrate the kind of dish, not the exact recipe.
 
 **Privacy:** your cycle data, favourites and recipes stay in this browser session; use *Save my data* to keep them.
 """)

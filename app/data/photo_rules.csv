@@ -1,0 +1,152 @@
+order,query,pattern
+0,pancakes,pancake
+1,waffles,waffle
+2,crepes,crepe|crêpe
+3,french toast,french toast
+4,omelette,omelet|frittata
+5,quiche,quiche
+6,scrambled eggs,scrambl
+7,eggs breakfast,\beggs?\b|benedict
+8,oatmeal bowl,^(?!.*(cookie|muffin|bread|bar|cake|pie|crisp|pancake|scone|loaf)).*(oatmeal|porridge|overnight oats)
+9,granola,granola|muesli
+10,smoothie,smoothie|shake\b
+11,cheesecake,cheesecake
+12,cupcakes,cupcake
+13,chocolate cake,chocolate.*cake|cake.*chocolate|devil'?s food
+14,carrot cake,carrot cake
+15,coffee cake,coffee ?cake|streusel
+16,pound cake,pound cake|bundt
+17,banana bread,banana.*(bread|loaf)
+18,zucchini bread,zucchini (bread|loaf)|pumpkin (bread|loaf)
+19,cake slice,\bcakes?\b|torte|gateau
+20,brownies,brownie|blondie
+21,chocolate chip cookies,chocolate chip cookie|choc chip
+22,cookies,cookie|biscotti|snickerdoodle|shortbread|macaroon|gingersnap|\bsnaps\b
+23,bar dessert,\bbars?\b|squares
+24,apple pie,apple (pie|crisp|crumble|cobbler)
+25,pumpkin pie,pumpkin pie|sweet potato pie
+26,pecan pie,pecan pie
+27,berry pie,(berry|cherry|peach).*(pie|cobbler|crisp|crumble|tart)
+28,pie,\bpies?\b|tart\b|tarts\b|tartlet|cobbler|crisp\b|crumble|galette
+29,muffins,muffin
+30,donuts,donut|doughnut
+31,cinnamon rolls,cinnamon roll|sticky bun|sweet roll
+32,chocolate fudge,fudge|truffle|bonbon
+33,candy,candy|toffee|brittle|caramel|marshmallow|lollipop|bark\b
+34,pudding dessert,pudding|custard|flan|mousse|panna cotta|creme brulee|trifle|parfait
+35,ice cream,ice cream|sorbet|gelato|frozen yogurt|popsicle|semifreddo
+36,meatloaf,meatloaf|meat loaf
+37,scones,scone
+38,biscuits bread,biscuit
+39,cornbread,cornbread|corn bread|johnny cake
+40,bagels,bagel|pretzel
+41,dinner rolls,\brolls?\b|\bbuns?\b|brioche
+42,focaccia,focaccia|flatbread|naan|pita\b
+43,bread loaf,bread|loaf|sourdough|baguette|challah
+44,pizza,pizza|calzone
+45,burger,burger|slider
+46,tacos,taco
+47,burrito,burrito|wrap\b|wraps\b
+48,enchiladas,enchilada|quesadilla|fajita|tostada|tamale
+49,nachos,nacho
+50,sushi,sushi|maki\b
+51,ramen noodles,ramen|noodle|pho\b|lo mein|pad thai|udon|chow mein
+52,dumplings,dumpling|wonton|pierogi|potsticker|gyoza
+53,samosa,samosa|empanada|turnover|hand pie
+54,lasagna,lasagn
+55,mac and cheese,mac.*cheese|macaroni
+56,spaghetti,spaghetti|bolognese|meatballs? and
+57,pasta dish,pasta|penne|fettuccin|linguin|ravioli|tortellini|gnocchi|orzo|rigatoni|ziti|manicotti|carbonara|alfredo
+58,risotto,risotto
+59,paella,paella|jambalaya
+60,fried rice,fried rice
+61,curry,curry|masala|korma|tikka|vindaloo
+62,dal lentils,\bdal\b|dhal|daal
+63,stir fry,stir.?fry|teriyaki|szechuan|kung pao|general tso|sweet and sour
+64,chili con carne,\bchili\b|chilli
+65,lentil soup,lentil soup
+66,tomato soup,tomato soup|gazpacho
+67,chicken soup,chicken.*soup|chicken noodle
+68,chowder,chowder|bisque
+69,stew,stew|goulash|gumbo|tagine|ragout
+70,soup bowl,soup|broth|minestrone|borscht
+71,casserole,casserole|bake\b|gratin|hotdish|pot pie|shepherd
+72,meatballs,meatball
+73,sandwich,sandwich|panini|sub\b|\bmelts?\b|sloppy joe|po'? ?boy
+74,kebab,kebab|kabob|skewer|souvlaki|shawarma|gyro
+75,falafel hummus,falafel|hummus
+76,guacamole,guacamole|avocado dip
+77,salsa,salsa|pico de gallo
+78,dip platter,\bdip\b|dips\b|fondue|spread
+79,deviled eggs,deviled
+80,bruschetta,bruschetta|crostini|canape|toast\b
+81,caesar salad,caesar
+82,pasta salad,pasta salad|macaroni salad
+83,potato salad,potato salad
+84,coleslaw,slaw
+85,fruit salad,fruit salad|ambrosia
+86,chicken salad,chicken salad|tuna salad|egg salad
+87,quinoa salad,quinoa|couscous|tabbouleh|bulgur
+88,bean salad,bean salad|chickpea salad|lentil salad
+89,green salad,salad
+90,shrimp dish,shrimp|prawn|scampi
+91,salmon fillet,salmon
+92,seafood,scallop|lobster|crab|mussel|clam|oyster|calamari|squid
+93,fish fillet,fish|tuna|cod\b|tilapia|halibut|trout|mahi|sole\b|haddock|catfish|snapper|sardine|swordfish
+94,chicken wings,wings?\b|drumstick
+95,roast chicken,roast(ed)? chicken|whole chicken|rotisserie
+96,turkey dinner,turkey
+97,grilled chicken,chicken|poultry|hen\b
+98,steak,steak|sirloin|tenderloin|filet
+99,pulled pork,pulled pork|carnitas
+100,pork chops,pork chop|pork loin|pork tenderloin
+101,ribs,\bribs?\b
+102,bacon,bacon
+103,sausage,sausage|chorizo|bratwurst|hot dog|kielbasa
+104,ham,\bham\b
+105,roast pork,pork
+106,lamb,lamb|mutton
+107,beef stew,pot roast|brisket|roast beef
+108,ground beef,beef|veal|venison|bison
+109,tofu,tofu|tempeh|seitan
+110,sweet potatoes,sweet potato|\byams?\b
+111,mashed potatoes,mashed potato|potato mash
+112,roasted potatoes,potato|fries|hash brown|tater
+113,rice dish,rice|pilaf|biryani
+114,bean dish,bean|lentil|chickpea|garbanzo
+115,roasted vegetables,roasted (veg|root)|vegetable|veggie
+116,broccoli,broccoli|cauliflower
+117,carrots,carrot
+118,asparagus,asparagus
+119,green beans,green bean|string bean|peas\b|snow pea|snap pea
+120,spinach,spinach|kale|chard|collard|greens
+121,mushrooms,mushroom
+122,zucchini,zucchini|squash|eggplant|aubergine|courgette
+123,stuffed peppers,stuffed pepper|bell pepper
+124,corn on the cob,\bcorn\b|polenta|grits
+125,pumpkin,pumpkin
+126,tomatoes,tomato
+127,cabbage,cabbage|sauerkraut|brussels
+128,salad dressing,dressing|vinaigrette
+129,pesto,pesto
+130,tomato sauce,marinara|tomato sauce|pasta sauce|spaghetti sauce
+131,bbq sauce,bbq|barbecue|marinade|rub\b
+132,jam jar,jam\b|jelly|preserves|marmalade|chutney|relish|compote|curd\b
+133,sauce bowl,sauce|gravy|glaze|syrup|aioli|mayonnaise|ketchup|butter\b
+134,pickles,pickle
+135,lemonade,lemonade|punch|limeade|agua fresca|spritzer
+136,cocktail,cocktail|martini|margarita|mojito|sangria|daiquiri|liqueur|eggnog
+137,hot chocolate,hot chocolate|cocoa
+138,coffee,coffee|latte|mocha|cappuccino|espresso|frappe
+139,tea,\btea\b|chai
+140,popcorn,popcorn
+141,trail mix,trail mix|snack mix|chex|granola bar|energy bites|energy balls
+142,nuts snack,almond|walnut|pecan|cashew|peanut|\bnuts?\b|pistachio
+143,crackers,cracker|chips\b|crisps
+144,cheese platter,cheese
+145,chocolate,chocolate
+146,banana,banana
+147,apples,\bapples?\b
+148,berries,berr|cherr
+149,lemon dessert,lemon|lime|orange|citrus
+150,peaches,peach|apricot|plum|nectarine|mango|pineapple

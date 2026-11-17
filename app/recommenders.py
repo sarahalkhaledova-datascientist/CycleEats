@@ -18,6 +18,7 @@ from __future__ import annotations
 import difflib
 import json
 import re
+import zlib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -130,6 +131,15 @@ class Recommender:
         self.params = pd.read_csv(d / "phase_params.csv").set_index("phase")
         self.thresholds = pd.read_csv(d / "phase_thresholds.csv").set_index("phase")["threshold"].to_dict()
         self.scoring = self.config["phase_scoring"]
+
+        # photos (notebook 11): Unsplash photos by dish type, chosen from the recipe name
+        self.photo_rules, self.photo_fallback, self.photos = [], {}, {}
+        if (d / "photos.csv").exists():
+            rules = pd.read_csv(d / "photo_rules.csv").sort_values("order")
+            self.photo_rules = [(q, re.compile(p, re.I)) for q, p in zip(rules["query"], rules["pattern"])]
+            self.photo_fallback = pd.read_csv(d / "photo_fallback.csv").set_index("meal_type")["query"].to_dict()
+            ph = pd.read_csv(d / "photos.csv").sort_values(["query", "rank"])
+            self.photos = {q: g.to_dict("records") for q, g in ph.groupby("query")}
 
     def _load_popularity(self, d: Path) -> np.ndarray:
         """Popularity rank saved by notebook 10 (Bayesian weighted rating, all interactions)."""
@@ -364,6 +374,21 @@ class Recommender:
 
     def ingredient_names(self) -> list[str]:
         return self.ingredients.index.tolist()
+
+    # ------------------------------------------------------------------ photos
+    def photo(self, name: str, meal_type: str, key) -> dict | None:
+        """An illustrative Unsplash photo for a recipe: its dish type from the name (first matching rule),
+        else its meal type. The same recipe always gets the same photo."""
+        if not self.photos:
+            return None
+        query = next((q for q, rx in self.photo_rules if rx.search(str(name))), None)
+        if query not in self.photos:
+            query = self.photo_fallback.get(meal_type, "home cooking")
+        options = self.photos.get(query)
+        if not options:
+            return None
+        n = int(key) if str(key).lstrip("-").isdigit() else zlib.crc32(str(key).encode())
+        return options[n % len(options)]
 
     # ------------------------------------------------------------------ search
     def _build_search_index(self):
