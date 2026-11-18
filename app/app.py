@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import importlib
 import json
 import uuid
 from datetime import date, timedelta
@@ -54,8 +55,10 @@ st.markdown("""
 
 
 @st.cache_resource(show_spinner="Loading recipes…")
-def get_recommender(code_version: str) -> Recommender:
-    return Recommender()
+def get_recommender(code_version: str):
+    # reload the module too: Streamlit Cloud keeps the old recommenders.py in memory after a push
+    importlib.reload(recommenders)
+    return recommenders.Recommender()
 
 
 def code_version() -> str:
