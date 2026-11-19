@@ -218,11 +218,13 @@ class Chatbot:
         m = re.search(r"^\s*RECIPES:\s*(.*)$", text, re.M | re.I)
         if m:
             text = (text[:m.start()] + text[m.end():]).strip()
-            ids = {int(x) for x in re.findall(r"\d+", m.group(1))}
-            shown = [i for i in idxs if int(self.R.recipes.iloc[i]["RecipeId"]) in ids]
+            ids = [int(x) for x in re.findall(r"\d+", m.group(1))]          # keep the order of the answer
+            by_id = {int(self.R.recipes.iloc[i]["RecipeId"]): i for i in idxs}
+            shown = [by_id[r] for r in dict.fromkeys(ids) if r in by_id]
         if not shown:
             low = text.lower()
-            shown = [i for i in idxs if str(self.R.recipes.iloc[i]["Name"]).lower() in low]
+            found = [(low.find(str(self.R.recipes.iloc[i]["Name"]).lower()), i) for i in idxs]
+            shown = [i for pos, i in sorted(found) if pos >= 0]
         return text, shown[:3]
 
     def small_talk(self, client, question: str, history: list[dict], kind: str, phase: str | None,
