@@ -689,7 +689,7 @@ st.markdown(f'<div class="ce-phase"><span class="ce-phase-name">{day_txt}{PHASE_
             f'{PHASE_INFO[phase]}<div class="ce-phase-why">{PHASE_WHY[phase]}</div></div>', unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------- tabs
-tab_for_you, tab_fav, tab_own, tab_about = st.tabs(["✨ For you", "♥ Favourites", "📝 My recipes", "ℹ️ About"])
+tab_for_you, tab_fav, tab_own, tab_about = st.tabs(["✨ For you", "♥ Favourites", "📝 Add recipe", "ℹ️ About"])
 
 with tab_for_you:
   if True:
@@ -758,7 +758,7 @@ with tab_fav, st.container(key="sec_fav"):
                                 "match": None, "missing": [[]] * len(rv)}), "recent", n_cols=5)
 
 with tab_own, st.container(key="sec_own"):
-    section_title("My recipes", "Your own recipes get the same nutrient and cycle-phase check as the catalogue.")
+    section_title("Add recipe", "Your own recipes get the same nutrient and cycle-phase check as the catalogue.")
     st.markdown("**Add a recipe**")
     st.caption("Search each ingredient in the list so its nutrients are counted. If it is not in the list, "
                "type it anyway: it is kept but not counted.")
