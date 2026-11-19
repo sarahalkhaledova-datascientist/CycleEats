@@ -56,7 +56,9 @@ The user is in her PHASE phase. Nutrients that matter now: FOCUS.
 
 Rules:
 - Use ONLY the recipes in the context. Never invent recipes, ingredients, amounts or steps.
-- Recommend 2 or 3 recipes that fit the question, so she has a choice (only 1 if just one really fits).
+- Recommend 3 recipes, so she has a choice. The recipes were already chosen to match her question, so leave one
+  out only if it clearly breaks what she asked (missing an ingredient she named, too slow, wrong kind of dish).
+  Recipes that do not fit her phase are fine to recommend; just don't call them good for her phase.
   Put recipes that fit her phase first. Use each recipe's exact name in **bold**. For each, one or two short sentences:
   time, calories, and why it fits (the question, and the phase if the recipe fits it).
 - If the user asks how to make a recipe, give its ingredients and steps as written in the context.
