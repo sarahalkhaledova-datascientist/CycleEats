@@ -139,6 +139,8 @@ class Recommender:
             self.photo_rules = [(q, re.compile(p, re.I)) for q, p in zip(rules["query"], rules["pattern"])]
             self.photo_fallback = pd.read_csv(d / "photo_fallback.csv").set_index("meal_type")["query"].to_dict()
             ph = pd.read_csv(d / "photos.csv").sort_values(["query", "rank"])
+            if (d / "photo_blocklist.csv").exists():      # photos checked by hand that show the wrong thing
+                ph = ph[~ph["photo_id"].isin(pd.read_csv(d / "photo_blocklist.csv")["photo_id"])]
             self.photos = {q: g.to_dict("records") for q, g in ph.groupby("query")}
 
     def _load_popularity(self, d: Path) -> np.ndarray:

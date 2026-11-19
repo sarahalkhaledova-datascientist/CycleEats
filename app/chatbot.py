@@ -40,8 +40,12 @@ PLAN_PROMPT = """You turn a user's message to a recipe app into a search plan. R
   "max_minutes": null,         // number if the user gives a time limit
   "max_calories": null,        // number if the user gives a calorie limit per serving
   "exclude": [],               // ingredients the user does not want (allergies, dislikes)
-  "followup": false,           // true if the message is about recipes already shown (e.g. 'how do I make the first one?')
-  "off_topic": false           // true if the message is not about food, cooking or eating
+  "intent": "recipes"          // one of:
+                               //  "recipes"   - wants recipe ideas or food/cooking help
+                               //  "followup"  - asks about recipes already shown (e.g. 'how do I make the first one?')
+                               //  "chitchat"  - greeting, thanks, goodbye, how are you, small talk
+                               //  "off_topic" - not about food, cooking or eating
+                               //  "unclear"   - cannot be understood (random letters, wrong keyboard)
 }
 Use the conversation for context. 'dinner' or 'lunch' means Main; 'side' means Salads & sides; 'snack' means Snacks & appetizers."""
 
@@ -59,6 +63,18 @@ Rules:
 - Keep it short and warm. Answer in the user's language.
 - End with one line exactly like this, with the ids of the recipes you recommended or described:
   RECIPES: 123, 456"""
+
+
+SMALLTALK_PROMPT = """You are CycleEats, a warm cooking assistant in a recipe app for women.
+The user's name is NAME. She is in her PHASE phase (good nutrients now: FOCUS).
+Her message is not a recipe request. Its type: KIND.
+Reply in one or two short, friendly sentences, in the same language as her message:
+- greeting / small talk: greet her back (use her name if you know it) and ask what she would like to eat today,
+  maybe with one short example idea that suits her phase.
+- thanks / goodbye: reply kindly and say you're here whenever she wants a meal idea.
+- off_topic: say kindly that you can only help with food, recipes and cooking, and invite a food question.
+- unclear: say you didn't quite understand and ask her to write it again.
+Do not name specific recipes. No medical advice."""
 
 
 class Chatbot:
@@ -188,14 +204,27 @@ class Chatbot:
             shown = [i for i in idxs if str(self.R.recipes.iloc[i]["Name"]).lower() in low]
         return text, shown[:3]
 
+    def small_talk(self, client, question: str, history: list[dict], kind: str, phase: str | None,
+                   focus: str, name: str) -> str:
+        system = (SMALLTALK_PROMPT.replace("NAME", name or "unknown").replace("PHASE", phase or "unknown")
+                  .replace("FOCUS", focus or "a balanced diet").replace("KIND", kind))
+        msgs = [{"role": "system", "content": system}] + history[-MAX_HISTORY:] + [{"role": "user", "content": question}]
+        try:
+            return self._chat(client, msgs).strip()
+        except Exception:
+            return "Hi! 🌿 What would you like to eat today?"
+
     # ------------------------------------------------------------------ one turn
     def ask(self, client, question: str, history: list[dict], last_idxs: list[int], phase: str | None,
-            focus: str = "", pantry: set[str] | None = None, staples: set[str] | None = None) -> dict:
+            focus: str = "", pantry: set[str] | None = None, staples: set[str] | None = None, name: str = "") -> dict:
         plan = self.understand(client, question, history)
-        if plan.get("off_topic"):
-            return {"text": "I can only help with food, recipes and cooking. Try asking for a meal idea! 🌿",
-                    "shown": [], "context": last_idxs, "plan": plan}
-        if plan.get("followup") and last_idxs:
+        intent = str(plan.get("intent") or "recipes").lower()
+        if plan.get("off_topic"):                     # older plan format
+            intent = "off_topic"
+        if intent in ("chitchat", "off_topic", "unclear"):
+            text = self.small_talk(client, question, history, intent, phase, focus, name)
+            return {"text": text, "shown": [], "context": last_idxs, "plan": plan}
+        if (intent == "followup" or plan.get("followup")) and last_idxs:
             idxs = last_idxs
         else:
             idxs = self.retrieve(plan, phase, pantry, staples)

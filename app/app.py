@@ -828,7 +828,8 @@ with tab_ask, st.container(key="sec_ask"):
                     res = bot.ask(Groq(api_key=api_key), question, history, last, phase,
                                   focus=re.sub("<[^>]+>", "", PHASE_INFO[phase]),
                                   pantry=set(ss.pantry) if ss.pantry else None,
-                                  staples=set(ss.basics) if ss.use_staples else set())
+                                  staples=set(ss.basics) if ss.use_staples else set(),
+                                  name=(ss.get("user_name") or "").strip())
                     rid = lambda i: int(R.recipes.iloc[i]["RecipeId"])
                     ss.chat_context = [rid(i) for i in res["context"]]
                     ss.chat.append({"role": "assistant", "content": res["text"], "shown": [rid(i) for i in res["shown"]]})
