@@ -20,7 +20,7 @@ LLM_MODEL = "openai/gpt-oss-20b"
 N_CANDIDATES = 40        # nearest recipes looked at before re-ranking
 N_CONTEXT = 5            # recipes sent to the LLM
 MAX_HISTORY = 6          # last 3 questions + answers kept for follow-ups
-BONUS_PHASE = 0.05       # re-ranking bonuses on top of cosine similarity (which is ~0.3 to 0.8)
+BONUS_PHASE = 0.10       # re-ranking bonuses on top of cosine similarity (which is ~0.3 to 0.8)
 BONUS_POPULAR = 0.03
 BONUS_PANTRY = 0.05
 
