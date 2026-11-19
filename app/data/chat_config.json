@@ -1,0 +1,7 @@
+{
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "dim": 384,
+  "n_recipes": 12375,
+  "rich_min_pdv": 20,
+  "built": "2026-11-19"
+}

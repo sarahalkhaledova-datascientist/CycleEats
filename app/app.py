@@ -59,6 +59,21 @@ st.markdown("""
 .ce-mark::after { content: ""; position: absolute; left: 50%; top: 1.05rem; height: 40px; border-left: 2px solid var(--ce-text); }
 .ce-track-facts { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-top: 0.7rem; color: var(--ce-muted); font-size: 0.88rem; }
 .ce-track-facts b { color: var(--ce-text); }
+/* tabs as big pill buttons, so people notice them */
+[data-testid="stTabs"] [role="tablist"] { gap: 0.6rem; padding: 0.3rem 0 0.6rem; border-bottom: none !important; }
+[data-testid="stTab"] { background: #ffffff; border: 2px solid var(--ce-soft); border-radius: 999px;
+                        padding: 0.6rem 1.3rem !important; height: auto !important; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+[data-testid="stTab"] p { font-size: 1.12rem !important; font-weight: 600; color: var(--ce-text); }
+[data-testid="stTab"]:hover { border-color: var(--ce-accent); }
+[data-testid="stTab"][aria-selected="true"] { background: var(--ce-accent); border-color: var(--ce-accent); }
+[data-testid="stTab"][aria-selected="true"] p { color: #ffffff !important; }
+[data-testid="stTabs"] .react-aria-SelectionIndicator { display: none; }
+[data-testid="stTabs"] [role="tablist"] { flex-wrap: wrap; overflow: visible !important; }
+@media (max-width: 640px) {
+  [data-testid="stTabs"] [role="tablist"] { gap: 0.45rem; }
+  [data-testid="stTab"] { padding: 0.45rem 0.9rem !important; }
+  [data-testid="stTab"] p { font-size: 1rem !important; }
+}
 .ce-review { color: var(--ce-muted); font-style: italic; font-size: 0.9rem; margin-top: 0.4rem; }
 .ce-review b { font-style: normal; color: var(--ce-text); }
 .ce-credit { color: var(--ce-muted); font-size: 0.68rem; margin: 0.15rem 0 0.4rem; }
