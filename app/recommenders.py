@@ -196,9 +196,11 @@ class Recommender:
         top = np.argpartition(-sim, k - 1)[:k]
         return np.asarray(self.L[top].T @ sim[top]).ravel()
 
-    def pantry_match(self, pantry: set[str] | None, use_staples: bool = True):
-        """Share of each recipe's ingredients the user has, and the missing ones."""
-        have = set(pantry or []) | (self.staples if use_staples else set())
+    def pantry_match(self, pantry: set[str] | None, use_staples: bool = True, staples: set[str] | None = None):
+        """Share of each recipe's ingredients the user has, and the missing ones.
+        ``staples``: the user's own basics (default: the standard list)."""
+        basics = self.staples if staples is None else set(staples)
+        have = set(pantry or []) | (basics if use_staples else set())
         share = np.array([len(p & have) / len(p) if p else 0.0 for p in self.parts])
         return share, have
 
@@ -209,7 +211,8 @@ class Recommender:
     def recommend(self, hearts=(), phase: str | None = None, pantry=None, meal_types=None,
                   own_recipes: list[OwnRecipe] | None = None, weights: dict | None = None,
                   only_cookable: bool = False, max_missing: int | None = None,
-                  use_staples: bool = True, k: int = 10, exclude=(), page: int | None = None) -> pd.DataFrame:
+                  use_staples: bool = True, k: int = 10, exclude=(), page: int | None = None,
+                  staples: set[str] | None = None) -> pd.DataFrame:
         """Top-k recommendations as a DataFrame (catalog recipes and, if suitable, own recipes).
 
         Own recipes are mixed into the first ``page`` rows (default: all k), so asking for more rows
@@ -237,7 +240,7 @@ class Recommender:
         score = personal.astype(float).copy()
         if phase:
             score += w.get("phase", 0) * self.phase_rank[phase]
-        share, have = self.pantry_match(pantry, use_staples)
+        share, have = self.pantry_match(pantry, use_staples, staples)
         use_pantry = bool(pantry)
         if use_pantry:
             score += w.get("pantry", 0) * share

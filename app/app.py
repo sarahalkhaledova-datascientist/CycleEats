@@ -162,6 +162,7 @@ def init_state():
     ss.setdefault("phase_pick", "menstrual")
     ss.setdefault("pantry", [])
     ss.setdefault("use_staples", True)
+    ss.setdefault("basics", sorted(R.staples))      # the user's own basics, editable in the sidebar
     ss.setdefault("only_cookable", False)
     ss.setdefault("max_missing", int(CFG["max_missing_default"]))
     ss.setdefault("meal_types", list(CFG["meal_type_default"]))
@@ -173,7 +174,7 @@ init_state()
 ss = st.session_state
 # keep values when their widget is not on screen (e.g. set-up pages vs. sidebar)
 for _k in ["user_name", "last_start", "cycle_len", "period_len", "manual_phase", "phase_pick", "pantry", "use_staples",
-           "only_cookable", "max_missing", "meal_types"] + [f"w_{k}" for k in R.weights_default]:
+           "basics", "only_cookable", "max_missing", "meal_types"] + [f"w_{k}" for k in R.weights_default]:
     if _k in ss:
         ss[_k] = ss[_k]
 
@@ -196,7 +197,7 @@ def own_objects() -> list[OwnRecipe]:
 
 def export_data() -> str:
     keys = ["user_name", "hearts", "recent", "own", "last_start", "cycle_len", "period_len", "manual_phase", "phase_pick", "pantry",
-            "use_staples", "only_cookable", "max_missing", "meal_types", "onboarding_done"] + [f"w_{k}" for k in R.weights_default]
+            "use_staples", "basics", "only_cookable", "max_missing", "meal_types", "onboarding_done"] + [f"w_{k}" for k in R.weights_default]
     data = {k: ss[k] for k in keys}
     data["last_start"] = ss.last_start.isoformat()
     data["hearts"] = [int(h) for h in ss.hearts]
@@ -218,6 +219,10 @@ def import_data(raw: bytes):
 def reset_weights():
     for k, v in R.weights_default.items():
         ss[f"w_{k}"] = float(v)
+
+
+def reset_basics():
+    ss.basics = sorted(R.staples)
 
 
 def show_more():
@@ -263,17 +268,20 @@ if ss.onboarding_done:
 
     st.header("🧺 Your kitchen")
     st.checkbox("Basics are always at home", key="use_staples",
-                help="Salt, pepper, oil, butter, sugar, flour, baking powder, garlic and common dried spices "
-                     "count as available, so you don't need to pick them.")
+                help="Things you always have (salt, oil, flour, spices…) count as available, so you don't need "
+                     "to pick them. You can change your basics below.")
     if ss.use_staples:   # basics are hidden from the list (keep any already picked, so the widget stays valid)
-        pantry_options = [n for n in R.ingredient_names() if n not in R.staples or n in ss.pantry]
+        pantry_options = [n for n in R.ingredient_names() if n not in set(ss.basics) or n in ss.pantry]
     else:
         pantry_options = R.ingredient_names()
     st.multiselect("Other ingredients you have", pantry_options, key="pantry",
                    placeholder="Type to search, e.g. chicken breast")
     if ss.use_staples:
-        with st.expander(f"Basics counted automatically ({len(R.staples)})"):
-            st.caption(", ".join(sorted(R.staples)))
+        with st.expander(f"My basics ({len(ss.basics)})"):
+            st.caption("Always in your kitchen. Remove what you don't keep (✕) and add what you always have.")
+            st.multiselect("My basics", sorted(set(R.ingredient_names()) | set(ss.basics)), key="basics",
+                           label_visibility="collapsed", placeholder="Add a basic, e.g. rice")
+            st.button("Reset to default", on_click=reset_basics, disabled=sorted(ss.basics) == sorted(R.staples))
     st.toggle("Only recipes I can cook now", key="only_cookable", disabled=not ss.pantry)
     if ss.only_cookable and ss.pantry:
         st.slider("Missing ingredients allowed", 0, 5, key="max_missing")
@@ -338,7 +346,7 @@ apply_theme(phase if ss.onboarding_done else (phase if ss.setup_step >= 2 else N
 
 
 # ----------------------------------------------------------------------------- cards
-HAVE = R.pantry_match(set(ss.pantry), ss.use_staples)[1] if ss.pantry else set()
+HAVE = R.pantry_match(set(ss.pantry), ss.use_staples, set(ss.basics))[1] if ss.pantry else set()
 
 
 def section_title(title: str, sub: str = ""):
@@ -624,12 +632,13 @@ with tab_for_you:
                 st.info(f"{len(ss.hearts)} liked so far. Like a few more for more personal suggestions.")
             # back to one page whenever a setting changes (liking a recipe does not count)
             sig = (phase, tuple(sorted(ss.pantry)), tuple(ss.meal_types), ss.only_cookable, int(ss.max_missing),
-                   ss.use_staples, tuple(sorted(weights.items())))
+                   ss.use_staples, tuple(sorted(ss.basics)), tuple(sorted(weights.items())))
             if ss.get("_rec_sig") != sig:
                 ss._rec_sig, ss.n_shown = sig, PAGE
             recs = R.recommend(hearts=ss.hearts, phase=phase, pantry=set(ss.pantry), meal_types=ss.meal_types,
                                own_recipes=own_objects(), weights=weights, only_cookable=ss.only_cookable,
-                               max_missing=int(ss.max_missing), use_staples=ss.use_staples, k=ss.n_shown, page=PAGE)
+                               max_missing=int(ss.max_missing), use_staples=ss.use_staples, k=ss.n_shown, page=PAGE,
+                               staples=set(ss.basics))
             if recs.empty:
                 st.warning("No recipes match. Allow more missing ingredients or add meal types.")
             else:
