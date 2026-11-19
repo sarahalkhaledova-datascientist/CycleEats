@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import html
 import importlib
 import json
 import uuid
@@ -45,6 +46,9 @@ st.markdown("""
 .ce-step { color: var(--ce-accent); font-weight: 700; letter-spacing: 0.04em; font-size: 0.85rem; text-transform: uppercase; }
 .ce-wiz-title { font-size: 1.7rem !important; line-height: 1.25; font-weight: 700; color: var(--ce-text); margin: 0.2rem 0 0.2rem; }
 .ce-photo { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 10px; display: block; }
+[data-testid="stProgressBarTrack"] > div { background-color: var(--ce-accent) !important; }
+.ce-review { color: var(--ce-muted); font-style: italic; font-size: 0.9rem; margin-top: 0.4rem; }
+.ce-review b { font-style: normal; color: var(--ce-text); }
 .ce-credit { color: var(--ce-muted); font-size: 0.68rem; margin: 0.15rem 0 0.4rem; }
 .ce-credit a { color: var(--ce-muted) !important; text-decoration: underline; }
 .ce-foot { color: var(--ce-muted); font-size: 0.8rem; margin-top: 2rem; }
@@ -232,7 +236,7 @@ def redo_setup():
 
 if ss.onboarding_done:
   with st.sidebar:
-    st.header("👤 You")
+    st.header(f"👩 {(ss.get('user_name') or '').strip() or 'You'}")
     st.text_input("Your name", key="user_name")
     st.button("Redo set-up", on_click=redo_setup)
 
@@ -344,29 +348,34 @@ def photo_html(ph: dict, w: int = 600, h: int = 400, note: str = "") -> str:
     return f'<img class="ce-photo" src="{url}" alt="{alt}" loading="lazy"><div class="ce-credit">{credit}</div>'
 
 
-def nutrient_bars(pdv: dict, n: int = 6):
+def nutrient_bars(pdv: dict, n: int = 6, n_cols: int = 1):
     top = sorted(pdv.items(), key=lambda kv: -kv[1])[:n]
-    for k, v in top:
-        st.progress(min(float(v) / 100, 1.0), text=f"{R.dv.loc[k, 'name']}: {v:.0f}% of daily value")
+    cols = st.columns(n_cols, gap="medium")
+    for i, (k, v) in enumerate(top):
+        cols[i % n_cols].progress(min(float(v) / 100, 1.0), text=f"{R.dv.loc[k, 'name']}: {v:.0f}% of daily value")
 
 
 @st.dialog("Recipe", width="large")
 def recipe_dialog(item: dict):
-    if item.get("photo"):
-        c_img, c_head = st.columns([2, 3])
-        c_img.markdown(photo_html(item["photo"], 720, 480, note="For illustration. "), unsafe_allow_html=True)
-        head = c_head
-    else:
-        head = st.container()
-    head.markdown(f"### {item['name']}")
-    head.markdown(f'<span class="ce-meta">{item["meta"]}</span>', unsafe_allow_html=True)
+    # name and facts across the top
+    st.markdown(f"### {item['name']}")
+    st.markdown(f'<span class="ce-meta">{item["meta"]}</span>', unsafe_allow_html=True)
     if item.get("badges"):
-        head.markdown(item["badges"], unsafe_allow_html=True)
+        st.markdown(item["badges"], unsafe_allow_html=True)
     if item.get("why"):
-        head.markdown(f'<span class="ce-why">Rich in: {item["why"]} of daily value</span>', unsafe_allow_html=True)
-    if item.get("description"):
-        head.caption(item["description"])
-    c1, c2 = st.columns([2, 3], gap="large")
+        st.markdown(f'<span class="ce-why">Rich in: {item["why"]} of daily value</span>', unsafe_allow_html=True)
+    # photo | nutrients stacked, so the values are easy to compare
+    st.markdown("")
+    if item.get("photo"):
+        c_img, c_nut = st.columns([1, 1], gap="large")
+        c_img.markdown(photo_html(item["photo"], 720, 480, note="For illustration. "), unsafe_allow_html=True)
+    else:
+        c_nut = st.container()
+    with c_nut:
+        st.markdown("**Nutrients per serving**")
+        nutrient_bars(item["pdv"])
+    st.markdown("")
+    c1, c2 = st.columns([1, 2], gap="large")
     with c1:
         st.markdown("**Ingredients**")
         lines = []
@@ -386,8 +395,9 @@ def recipe_dialog(item: dict):
             st.markdown("\n".join(f"{i}. {x}" for i, x in enumerate(item["steps"], 1)))
         else:
             st.caption("No steps written.")
-    st.markdown("**Nutrients per serving**")
-    nutrient_bars(item["pdv"])
+    if item.get("description"):
+        review = html.escape(str(item["description"]).strip().strip('"“”'))
+        st.markdown(f'<div class="ce-review"><b>Review</b><br>“{review}”</div>', unsafe_allow_html=True)
 
 
 def open_recipe(row):
