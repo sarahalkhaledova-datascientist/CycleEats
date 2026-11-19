@@ -696,9 +696,11 @@ def cycle_tracker(phase: str, day: int | None, cycle_len: int, period_len: int):
 day_txt = f"Day {cycle_day} · " if cycle_day else ""
 lines = ENCOURAGE[phase]
 st.markdown(f'<p class="ce-hello">{greeting()}</p>', unsafe_allow_html=True)
-if "encourage_seed" not in ss:          # new line each visit, but it stays the same while you click around
-    ss.encourage_seed = random.randrange(1_000_000)
-st.markdown(f'<p class="ce-sub">{lines[ss.encourage_seed % len(lines)]}</p>', unsafe_allow_html=True)
+# a new line on each visit and whenever the cycle day or phase changes; it stays put while you click around
+if ss.get("encourage_for") != (phase, cycle_day):
+    ss.encourage_for = (phase, cycle_day)
+    ss.encourage_idx = random.randrange(len(lines))
+st.markdown(f'<p class="ce-sub">{lines[ss.encourage_idx % len(lines)]}</p>', unsafe_allow_html=True)
 cycle_tracker(phase, None if ss.manual_phase else cycle_day, int(ss.cycle_len), int(ss.period_len))
 st.markdown(f'<div class="ce-phase"><span class="ce-phase-name">{day_txt}{PHASE_LABELS[phase]} phase</span><br>'
             f'{PHASE_INFO[phase]}<div class="ce-phase-why">{PHASE_WHY[phase]}</div></div>', unsafe_allow_html=True)
