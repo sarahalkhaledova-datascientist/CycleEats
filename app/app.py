@@ -47,6 +47,17 @@ st.markdown("""
 .ce-wiz-title { font-size: 1.7rem !important; line-height: 1.25; font-weight: 700; color: var(--ce-text); margin: 0.2rem 0 0.2rem; }
 .ce-photo { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 10px; display: block; }
 [data-testid="stProgressBarTrack"] > div { background-color: var(--ce-accent) !important; }
+.ce-track { background: #ffffff; border-radius: 14px; padding: 0.9rem 1.2rem 0.8rem; margin: 0.6rem 0 0.8rem; }
+.ce-track-title { font-weight: 700; color: var(--ce-text); margin-bottom: 1.6rem; }
+.ce-track-bar { position: relative; display: flex; height: 30px; border-radius: 8px; overflow: visible; gap: 2px; }
+.ce-seg { display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; }
+.ce-seg:first-child { border-radius: 8px 0 0 8px; } .ce-seg:last-child { border-radius: 0 8px 8px 0; }
+.ce-mark { position: absolute; top: -1.45rem; transform: translateX(-50%); font-size: 0.75rem; font-weight: 700;
+           color: var(--ce-text); white-space: nowrap; text-align: center; line-height: 1; }
+.ce-mark::after { content: ""; position: absolute; left: 50%; top: 1.05rem; height: 40px; border-left: 2px solid var(--ce-text); }
+.ce-track-facts { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-top: 0.7rem; color: var(--ce-muted); font-size: 0.88rem; }
+.ce-track-facts b { color: var(--ce-text); }
 .ce-review { color: var(--ce-muted); font-style: italic; font-size: 0.9rem; margin-top: 0.4rem; }
 .ce-review b { font-style: normal; color: var(--ce-text); }
 .ce-credit { color: var(--ce-muted); font-size: 0.68rem; margin: 0.15rem 0 0.4rem; }
@@ -533,11 +544,51 @@ if not ss.onboarding_done:
         show_grid(df, "ob", n_cols=4)
     st.stop()
 
+# ----------------------------------------------------------------------------- cycle tracking bar
+def phase_runs(cycle_len: int, period_len: int) -> list[tuple[str, int, int]]:
+    """The cycle as (phase, first day, last day) runs, using the same rules as cycle_phase."""
+    runs = []
+    for d in range(1, cycle_len + 1):
+        ph, _ = cycle_phase(date.today() - timedelta(days=d - 1), cycle_len, period_len)
+        if runs and runs[-1][0] == ph:
+            runs[-1] = (ph, runs[-1][1], d)
+        else:
+            runs.append((ph, d, d))
+    return runs
+
+
+def cycle_tracker(phase: str, day: int | None, cycle_len: int, period_len: int):
+    runs = phase_runs(cycle_len, period_len)
+    segs = ""
+    for ph, a, b in runs:
+        acc, _, soft, _ = PHASE_THEME[ph]
+        now = ph == phase
+        style = (f"flex: {b - a + 1}; background: {acc if now else soft}; color: {'#ffffff' if now else acc};")
+        segs += f'<div class="ce-seg" style="{style}" title="{PHASE_LABELS[ph]}: days {a}-{b}">{PHASE_LABELS[ph]}</div>'
+    mark, facts = "", ""
+    if day:
+        mark = f'<div class="ce-mark" style="left: {(day - 0.5) / cycle_len * 100:.2f}%">Day {day}</div>'
+        i = next(k for k, (ph, a, b) in enumerate(runs) if a <= day <= b)
+        nxt_ph, nxt_start = (runs[i + 1][0], runs[i + 1][1]) if i + 1 < len(runs) else ("menstrual", cycle_len + 1)
+        to_next, to_period = nxt_start - day, cycle_len - day + 1
+        plural = lambda n: f"{n} day{'s' if n != 1 else ''}"
+        facts = (f"<span><b>Day {day}</b> of {cycle_len}</span>"
+                 + (f"<span>{PHASE_LABELS[nxt_ph]} phase in <b>{plural(to_next)}</b></span>" if nxt_ph != "menstrual" else "")
+                 + f"<span>Next period in <b>{plural(to_period)}</b></span>")
+    else:
+        facts = ("<span>You chose your phase yourself. Turn off <b>Set my phase manually</b> in the sidebar "
+                 "and add your period date to track your days.</span>")
+    st.markdown(f'<div class="ce-track"><div class="ce-track-title">🌙 Cycle tracking</div>'
+                f'<div class="ce-track-bar">{segs}{mark}</div><div class="ce-track-facts">{facts}</div></div>',
+                unsafe_allow_html=True)
+
+
 # ----------------------------------------------------------------------------- main page header
 day_txt = f"Day {cycle_day} · " if cycle_day else ""
 lines = ENCOURAGE[phase]
 st.markdown(f'<p class="ce-hello">{greeting()}</p>', unsafe_allow_html=True)
 st.markdown(f'<p class="ce-sub">{lines[date.today().toordinal() % len(lines)]}</p>', unsafe_allow_html=True)
+cycle_tracker(phase, None if ss.manual_phase else cycle_day, int(ss.cycle_len), int(ss.period_len))
 st.markdown(f'<div class="ce-phase"><span class="ce-phase-name">{day_txt}{PHASE_LABELS[phase]} phase</span><br>'
             f'{PHASE_INFO[phase]}<div class="ce-phase-why">{PHASE_WHY[phase]}</div></div>', unsafe_allow_html=True)
 
