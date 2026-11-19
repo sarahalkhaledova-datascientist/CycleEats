@@ -39,7 +39,9 @@ PLAN_PROMPT = """You turn a user's message to a recipe app into a search plan. R
   "vegetarian": false,         // true only if the user wants no meat or fish
   "max_minutes": null,         // number if the user gives a time limit
   "max_calories": null,        // number if the user gives a calorie limit per serving
-  "exclude": [],               // ingredients the user does not want (allergies, dislikes)
+  "include": [],               // ingredients the user has or wants in the dish, simple singular names
+                               // (e.g. 'I have chicken breast and mushrooms' -> ["chicken", "mushroom"])
+  "exclude": [],               // ingredients the user does not want (allergies, dislikes), simple singular names
   "intent": "recipes"          // one of:
                                //  "recipes"   - wants recipe ideas or food/cooking help
                                //  "followup"  - asks about recipes already shown (e.g. 'how do I make the first one?')
@@ -59,6 +61,7 @@ Rules:
 - If the user asks how to make a recipe, give its ingredients and steps as written in the context.
   Amounts in the ingredient list are Food.com quantities without units; do not add units.
 - If none of the recipes fits, say so honestly and suggest how to rephrase.
+- Do not recommend decorations, garnishes, sauces or drinks on their own unless she asks for them.
 - You are not a doctor: no medical advice, diagnosis or promises about symptoms.
 - Keep it short and warm. Answer in the user's language.
 - End with one line exactly like this, with the ids of the recipes you recommended or described:
@@ -75,6 +78,14 @@ Reply in one or two short, friendly sentences, in the same language as her messa
 - off_topic: say kindly that you can only help with food, recipes and cooking, and invite a food question.
 - unclear: say you didn't quite understand and ask her to write it again.
 Do not name specific recipes. No medical advice."""
+
+
+def _singular(word: str) -> str:
+    """'mushrooms' -> 'mushroom', 'tomatoes' -> 'tomato', 'berries' -> 'berr' (substring match on ingredients)."""
+    for end, new in (("ies", ""), ("oes", "o"), ("s", "")):
+        if word.endswith(end) and len(word) > len(end) + 2 and not word.endswith("ss"):
+            return word[: -len(end)] + new
+    return word
 
 
 class Chatbot:
@@ -129,7 +140,8 @@ class Chatbot:
         except Exception:
             pass                   # fall back to searching the question as written
         plan["meal_types"] = [t for t in (plan.get("meal_types") or []) if t in self.meal_types]
-        plan["exclude"] = [str(x).lower() for x in (plan.get("exclude") or []) if str(x).strip()]
+        for k in ("include", "exclude"):
+            plan[k] = [_singular(str(x).lower().strip()) for x in (plan.get(k) or []) if str(x).strip()]
         for k in ("max_minutes", "max_calories"):
             try:
                 plan[k] = int(plan[k]) if plan.get(k) else None
@@ -153,6 +165,14 @@ class Chatbot:
             ok &= rec["Calories"].to_numpy() <= plan["max_calories"]
         for x in plan.get("exclude", []):
             ok &= np.array([not any(x in p for p in parts) for parts in rec["parts_norm"]])
+        # ingredients she has or wants: recipes with all of them if there are enough, else with most of them
+        inc = plan.get("include") or []
+        if inc:
+            n_has = np.array([sum(any(x in p for p in parts) for x in inc) for parts in rec["parts_norm"]])
+            for need in range(len(inc), 0, -1):
+                if (ok & (n_has >= need)).sum() >= 3:
+                    ok &= n_has >= need
+                    break
         if not ok.any():
             return []
         sim = np.where(ok, sim, -np.inf)
