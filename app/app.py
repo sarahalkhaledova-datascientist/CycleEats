@@ -9,7 +9,9 @@ import hashlib
 import html
 import importlib
 import json
+import os
 import random
+import re
 import uuid
 from datetime import date, timedelta
 from pathlib import Path
@@ -17,6 +19,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+import chatbot
 import recommenders
 from recommenders import PHASE_LABELS, UNITS, OwnRecipe, Recommender, cycle_phase
 
@@ -103,6 +106,24 @@ def code_version() -> str:
 
 # the cache is rebuilt whenever the code or photos change (otherwise an update keeps the old object)
 R = get_recommender(code_version())
+
+
+@st.cache_resource(show_spinner="Loading the chatbot…")
+def get_chatbot(version: str):
+    importlib.reload(chatbot)
+    return chatbot.Chatbot(R, recommenders.DATA_DIR)
+
+
+def chatbot_version() -> str:
+    return code_version() + hashlib.md5(Path(chatbot.__file__).read_bytes()).hexdigest()
+
+
+def groq_key() -> str:
+    """The Groq key lives in Streamlit secrets (never in the code or on GitHub)."""
+    try:
+        return st.secrets.get("GROQ_API_KEY", "")
+    except Exception:
+        return os.environ.get("GROQ_API_KEY", "")
 MIN_ONBOARD = 3            # recipes to like before leaving the start screen
 PAGE = 12                  # suggestions per page ("Show more" adds another page)
 MAX_SHOWN = 48
@@ -706,7 +727,8 @@ st.markdown(f'<div class="ce-phase"><span class="ce-phase-name">{day_txt}{PHASE_
             f'{PHASE_INFO[phase]}<div class="ce-phase-why">{PHASE_WHY[phase]}</div></div>', unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------- tabs
-tab_for_you, tab_fav, tab_own, tab_about = st.tabs(["✨ For you", "♥ Favourites", "📝 Add recipe", "ℹ️ About"])
+tab_for_you, tab_ask, tab_fav, tab_own, tab_about = st.tabs(["✨ For you", "💬 Ask", "♥ Favourites", "📝 Add recipe",
+                                                             "ℹ️ About"])
 
 with tab_for_you:
   if True:
@@ -751,6 +773,73 @@ with tab_for_you:
                 if len(recs) >= ss.n_shown and ss.n_shown < MAX_SHOWN:
                     _, mid, _ = st.columns([1, 2, 1])
                     mid.button(f"Show more ({ss.n_shown} of {MAX_SHOWN} shown)", on_click=show_more, width="stretch")
+
+CHAT_EXAMPLES = ["A quick dinner under 30 minutes", "Something rich in iron for my period",
+                 "What can I cook with eggs and spinach?", "A vegetarian lunch with lentils"]
+
+
+def catalog_rows(ids: list[int]) -> pd.DataFrame:
+    """Card rows for catalogue recipes, in the given order."""
+    ids = [i for i in ids if i in R.idx.index]
+    r = R.recipes.set_index("RecipeId").loc[ids].reset_index()
+    return pd.DataFrame({"id": r["RecipeId"], "name": r["Name"], "meal_type": r["meal_type"],
+                         "minutes": r["TotalTime_min"], "calories": r["Calories"], "is_own": False,
+                         "phase_fit": r[f"label_{phase}"], "why": r[f"why_{phase}"],
+                         "match": None, "missing": [[]] * len(r)})
+
+
+def ask_example(q: str):
+    ss.chat_pending = q
+
+
+def clear_chat():
+    ss.chat, ss.chat_context = [], []
+
+
+with tab_ask, st.container(key="sec_ask"):
+    section_title("Ask CycleEats", "Ask for a meal idea in your own words. Answers come only from the app's recipes "
+                                   "and know your cycle phase and your kitchen.")
+    ss.setdefault("chat", [])             # [{"role", "content", "shown": [RecipeId]}]
+    ss.setdefault("chat_context", [])     # RecipeIds of the last recipes found (for follow-up questions)
+    api_key = groq_key()
+    if not api_key:
+        st.info("The chatbot needs a Groq API key. Add `GROQ_API_KEY` to the app's secrets.")
+    else:
+        if not ss.chat:
+            st.caption("Try one of these:")
+            ex_cols = st.columns(2)
+            for n, q in enumerate(CHAT_EXAMPLES):
+                ex_cols[n % 2].button(q, on_click=ask_example, args=(q,), width="stretch", key=f"ex_{q}")
+        for n, msg in enumerate(ss.chat):
+            with st.chat_message(msg["role"], avatar="👩" if msg["role"] == "user" else "🌿"):
+                st.markdown(msg["content"])
+                if msg.get("shown"):
+                    show_grid(catalog_rows(msg["shown"]), f"chat{n}")
+        question = st.chat_input("Ask for a recipe, e.g. a warm vegetarian dinner")
+        question = question or ss.pop("chat_pending", None)
+        if question:
+            ss.chat.append({"role": "user", "content": question})
+            with st.spinner("Looking through the recipes…"):
+                try:
+                    from groq import Groq
+                    bot = get_chatbot(chatbot_version())
+                    history = [{"role": m["role"], "content": m["content"]} for m in ss.chat[:-1]]
+                    last = [int(R.idx[i]) for i in ss.chat_context if i in R.idx.index]
+                    res = bot.ask(Groq(api_key=api_key), question, history, last, phase,
+                                  focus=re.sub("<[^>]+>", "", PHASE_INFO[phase]),
+                                  pantry=set(ss.pantry) if ss.pantry else None,
+                                  staples=set(ss.basics) if ss.use_staples else set())
+                    rid = lambda i: int(R.recipes.iloc[i]["RecipeId"])
+                    ss.chat_context = [rid(i) for i in res["context"]]
+                    ss.chat.append({"role": "assistant", "content": res["text"], "shown": [rid(i) for i in res["shown"]]})
+                except Exception as e:
+                    ss.chat.append({"role": "assistant", "content": "Sorry, I couldn't answer right now. "
+                                    f"Please try again in a moment. ({type(e).__name__})"})
+            st.rerun()
+        if ss.chat:
+            st.button("Clear chat", on_click=clear_chat)
+    st.caption("Answers are written by an AI (gpt-oss on Groq) from the app's recipes and can contain mistakes. "
+               "Not medical advice.")
 
 with tab_fav, st.container(key="sec_fav"):
     section_title("Recipes you like", "Everything you tapped ♡ on. Tap ♥ again to remove one.")
@@ -875,6 +964,11 @@ Nutrient values are estimates.
 
 **Photos:** from [Unsplash](https://unsplash.com/?utm_source=cycleeats&utm_medium=referral), chosen by dish type
 (e.g. *banana bread*, *lentil soup*). They illustrate the kind of dish, not the exact recipe.
+
+**Ask (chatbot):** your question is turned into a search, the closest recipes are found with sentence
+embeddings (*all-MiniLM-L6-v2*), recipes that fit your phase move up, and an AI model (*gpt-oss-20b* on Groq)
+answers using only those recipes (RAG, retrieval-augmented generation). Your question is sent to Groq;
+your cycle data is not, only your current phase.
 
 **Privacy:** your cycle data, favourites and recipes stay in this browser session; use *Save my data* to keep them.
 """)

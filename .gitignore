@@ -38,3 +38,6 @@ env/
 !app/data/
 !app/data/*.npz
 !app/data/*.csv
+
+# --- secrets: API keys never go to GitHub ---
+.streamlit/secrets.toml

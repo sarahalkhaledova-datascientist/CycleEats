@@ -5,3 +5,5 @@ pyarrow
 scipy
 scikit-learn
 streamlit>=1.50
+fastembed
+groq
